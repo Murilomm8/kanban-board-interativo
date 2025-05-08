@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kanban Board Interativo – Estilo Trello</title>
+  
+  <!-- Google Fonts: Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Font Awesome para ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  
+  <style>
+    /* Estilos Globais */
+    body {
+      background: linear-gradient(135deg, #f2f2f2, #e6e6e6);
+      font-family: 'Poppins', sans-serif;
+      color: #333;
+    }
+    
+    /* Cabeçalho do Board */
+    .board-header {
+      margin: 20px auto;
+      max-width: 1200px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .board-header h2 {
+      margin: 0;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    /* Container do Kanban */
+    .kanban-container {
+      margin: 20px auto;
+      max-width: 1200px;
+    }
+    .kanban-column {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      min-height: 450px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      transition: transform 0.2s;
+    }
+    .kanban-column:hover {
+      transform: translateY(-3px);
+    }
+    .kanban-column h5 {
+      text-align: center;
+      margin-bottom: 15px;
+      font-weight: 600;
+      color: #555;
+    }
+    
+    /* Estilo dos Cards (Tarefas) */
+    .kanban-item {
+      background-color: #f8fafc;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      cursor: move;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .kanban-item:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      transform: scale(1.01);
+    }
+    .kanban-item span.task-text {
+      flex-grow: 1;
+    }
+    
+    /* Formulários de Adição */
+    .add-task-form {
+      margin-top: 10px;
+    }
+    .add-task-form input.form-control {
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    .add-task-form button {
+      border-radius: 4px;
+    }
+    
+    /* Botões de Ação */
+    .btn-action {
+      margin-left: 5px;
+    }
+    
+    /* Elementos arrastáveis */
+    .sortable-ghost {
+      opacity: 0.4;
+    }
+  </style>
+</head>
+<body>
+  <!-- Cabeçalho do Board -->
+  <div class="container board-header">
+    <h2>Kanban Board Interativo</h2>
+    <button class="btn btn-danger" onclick="clearBoard()">
+      <i class="fas fa-trash-alt"></i> Limpar Quadro
+    </button>
+  </div>
+  
+  <!-- Container do Kanban Board -->
+  <div class="container kanban-container">
+    <div class="row">
+      <!-- Coluna "A Fazer" -->
+      <div class="col-md-4">
+        <div class="kanban-column" id="todo">
+          <h5><i class="fas fa-list-ul"></i> A Fazer</h5>
+          <!-- Contêiner para os cards (arrastáveis) -->
+          <div id="column-todo-tasks"></div>
+          <!-- Formulário de Adição -->
+          <div class="add-task-form">
+            <input type="text" class="form-control" id="new-task-todo" placeholder="Digite uma nova tarefa...">
+            <button class="btn btn-primary btn-sm mt-2" onclick="addTask('todo')">
+              <i class="fas fa-plus"></i> Adicionar
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Coluna "Fazendo" -->
+      <div class="col-md-4">
+        <div class="kanban-column" id="inprogress">
+          <h5><i class="fas fa-spinner"></i> Fazendo</h5>
+          <div id="column-inprogress-tasks"></div>
+          <div class="add-task-form">
+            <input type="text" class="form-control" id="new-task-inprogress" placeholder="Digite uma nova tarefa...">
+            <button class="btn btn-primary btn-sm mt-2" onclick="addTask('inprogress')">
+              <i class="fas fa-plus"></i> Adicionar
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Coluna "Feito" -->
+      <div class="col-md-4">
+        <div class="kanban-column" id="done">
+          <h5><i class="fas fa-check"></i> Feito</h5>
+          <div id="column-done-tasks"></div>
+          <div class="add-task-form">
+            <input type="text" class="form-control" id="new-task-done" placeholder="Digite uma nova tarefa...">
+            <button class="btn btn-primary btn-sm mt-2" onclick="addTask('done')">
+              <i class="fas fa-plus"></i> Adicionar
+            </button>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+  <!-- Modal para Edição de Tarefas -->
+  <div class="modal fade" id="editTaskModal" tabindex="-1" aria-labelledby="editTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title" id="editTaskModalLabel">Editar Tarefa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-task-column">
+          <input type="hidden" id="edit-task-id">
+          <div class="mb-3">
+            <label for="edit-task-input" class="form-label">Descrição da Tarefa</label>
+            <input type="text" class="form-control" id="edit-task-input">
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="saveEditTask()">Salvar Alterações</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Bibliotecas JavaScript -->
+  <!-- SortableJS para drag & drop -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <!-- Bootstrap Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    /***************************************
+     * Dados e Persistência com LocalStorage *
+     ***************************************/
+    let boardData = {
+      todo: [],
+      inprogress: [],
+      done: []
+    };
+
+    function loadBoard() {
+      const stored = localStorage.getItem('kanbanData');
+      if (stored) {
+        boardData = JSON.parse(stored);
+      }
+      renderBoard();
+    }
+
+    function saveBoard() {
+      localStorage.setItem('kanbanData', JSON.stringify(boardData));
+    }
+    
+    /**********************************
+     * Função de Renderização do Board *
+     **********************************/
+    function renderBoard() {
+      ['todo', 'inprogress', 'done'].forEach(column => {
+        const container = document.getElementById('column-' + column + '-tasks');
+        container.innerHTML = "";
+        boardData[column].forEach(task => {
+          const taskDiv = document.createElement('div');
+          taskDiv.className = 'kanban-item';
+          taskDiv.setAttribute('data-id', task.id);
+          taskDiv.innerHTML = `
+            <span class="task-text">${task.text}</span>
+            <div>
+              <button class="btn btn-sm btn-warning btn-action" onclick="openEditTaskModal('${column}', '${task.id}')">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-danger btn-action" onclick="deleteTask('${column}', '${task.id}', event)">
+                <i class="fas fa-trash"></i>
+              </button>
+              ${ column !== 'done'
+                ? `<button class="btn btn-sm btn-success btn-action" onclick="markTaskDone('${column}', '${task.id}')">
+                    <i class="fas fa-check"></i>
+                  </button>`
+                : `<button class="btn btn-sm btn-secondary btn-action" onclick="markTaskUndone('${column}', '${task.id}')">
+                    <i class="fas fa-undo"></i>
+                  </button>`
+              }
+            </div>
+          `;
+          container.appendChild(taskDiv);
+        });
+      });
+    }
+    
+    /****************************
+     * Funções CRUD para Tarefas *
+     ****************************/
+    function addTask(column) {
+      const input = document.getElementById('new-task-' + column);
+      const taskText = input.value.trim();
+      if (taskText === "") return;
+      const newTask = { id: Date.now().toString(), text: taskText };
+      boardData[column].push(newTask);
+      saveBoard();
+      renderBoard();
+      input.value = "";
+    }
+    
+    function deleteTask(column, taskId, e) {
+      e.stopPropagation();
+      if (confirm("Tem certeza que deseja excluir esta tarefa?")) {
+        boardData[column] = boardData[column].filter(task => task.id !== taskId);
+        saveBoard();
+        renderBoard();
+      }
+    }
+    
+    function openEditTaskModal(column, taskId) {
+      const task = boardData[column].find(t => t.id === taskId);
+      if (!task) return;
+      document.getElementById('edit-task-column').value = column;
+      document.getElementById('edit-task-id').value = taskId;
+      document.getElementById('edit-task-input').value = task.text;
+      const editModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
+      editModal.show();
+    }
+    
+    function saveEditTask() {
+      const column = document.getElementById('edit-task-column').value;
+      const taskId = document.getElementById('edit-task-id').value;
+      const newText = document.getElementById('edit-task-input').value.trim();
+      if (newText === "") return;
+      boardData[column] = boardData[column].map(task => (task.id === taskId ? { ...task, text: newText } : task));
+      saveBoard();
+      renderBoard();
+      bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
+    }
+    
+    function markTaskDone(column, taskId) {
+      const taskIndex = boardData[column].findIndex(task => task.id === taskId);
+      if (taskIndex === -1) return;
+      const task = boardData[column].splice(taskIndex, 1)[0];
+      boardData['done'].push(task);
+      saveBoard();
+      renderBoard();
+    }
+    
+    function markTaskUndone(column, taskId) {
+      if (column !== 'done') return;
+      const taskIndex = boardData['done'].findIndex(task => task.id === taskId);
+      if (taskIndex === -1) return;
+      const task = boardData['done'].splice(taskIndex, 1)[0];
+      boardData['todo'].push(task);
+      saveBoard();
+      renderBoard();
+    }
+    
+    function clearBoard() {
+      if (confirm("Tem certeza de que deseja limpar todo o quadro?")) {
+        boardData = { todo: [], inprogress: [], done: [] };
+        saveBoard();
+        renderBoard();
+      }
+    }
+    
+    /***********************************
+     * Configuração Drag & Drop (SortableJS) *
+     ***********************************/
+    function initializeDragAndDrop() {
+      const cols = ['todo', 'inprogress', 'done'];
+      cols.forEach(column => {
+        new Sortable(
+          document.getElementById('column-' + column + '-tasks'),
+          {
+            group: 'kanban',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function(evt) {
+              updateBoardFromDOM();
+            }
+          }
+        );
+      });
+    }
+    
+    function updateBoardFromDOM() {
+      const cols = ['todo', 'inprogress', 'done'];
+      cols.forEach(column => {
+        const container = document.getElementById('column-' + column + '-tasks');
+        const newTasks = [];
+        container.querySelectorAll(".kanban-item").forEach(item => {
+          const id = item.getAttribute("data-id");
+          // Usa textContent do <span class="task-text"> dentro do item
+          const textElement = item.querySelector("span.task-text");
+          const text = textElement ? textElement.textContent : '';
+          newTasks.push({ id, text });
+        });
+        boardData[column] = newTasks;
+      });
+      saveBoard();
+    }
+    
+    /**************************
+     * Inicialização Geral    *
+     **************************/
+    document.addEventListener("DOMContentLoaded", () => {
+      loadBoard();
+      initializeDragAndDrop();
+    });
+  </script>
+</body>
+</html>
